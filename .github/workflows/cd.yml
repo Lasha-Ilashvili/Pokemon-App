@@ -19,7 +19,6 @@ jobs:
         fetch-depth: 0
 
     - name: Generate release version
-      id: version
       run: |
         VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2)
         TAG="v$VERSION"
