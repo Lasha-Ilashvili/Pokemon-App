@@ -1,0 +1,65 @@
+name: Setup Android Environment
+
+on:
+  workflow_call:
+    inputs:
+      install-platforms:
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      android-home:
+        description: "Android SDK home directory"
+        value: ${{ jobs.setup.outputs.android-home }}
+      app-version:
+        description: "Application version from version.properties"
+        value: ${{ jobs.setup.outputs.app-version }}
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      android-home: ${{ steps.setup-sdk.outputs.android-home }}
+      app-version: ${{ steps.extract-version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - id: extract-version
+        name: Extract version
+        run: |
+          VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2 || echo "1.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Java with Gradle caching
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - id: setup-sdk
+        name: Setup Android SDK
+        run: |
+          CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip"
+          ANDROID_HOME=$HOME/android-sdk
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          
+          wget -q $CMDLINE_TOOLS_URL -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d $ANDROID_HOME/
+          mv $ANDROID_HOME/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+          mkdir -p $ANDROID_HOME/cmdline-tools/tools
+          mv $ANDROID_HOME/cmdline-tools/latest $ANDROID_HOME/cmdline-tools/tools/
+          
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/cmdline-tools/tools/bin" >> $GITHUB_PATH
+          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+          echo "android-home=$ANDROID_HOME" >> $GITHUB_OUTPUT
+          
+          yes | $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager --licenses
+          
+          if [ "${{ inputs.install-platforms }}" = "true" ]; then
+            $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-33"
+          else
+            $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager "platform-tools" "build-tools;34.0.0"
+          fi
