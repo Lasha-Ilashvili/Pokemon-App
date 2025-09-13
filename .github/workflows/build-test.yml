@@ -7,48 +7,89 @@ on:
         required: true
         type: string
         description: 'Build variant: Debug or Release'
+      skip-tests:
+        required: false
+        type: boolean
+        default: false
+        description: 'Skip all tests and lint checks'
 
 jobs:
   build-and-test:
-    name: Build ${{ inputs.build-variant }} and Test
+    name: Build ${{ inputs.build-variant }}${{ inputs.skip-tests && ' (Release Only)' || ' and Test' }}
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up JDK 17
+    - name: Setup Android Build Environment
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: 'gradle'
 
-    - name: Cache Gradle dependencies
-      uses: actions/cache@v4
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
       with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
+        gradle-home-cache-cleanup: true
 
-    - name: Make gradlew executable
-      run: chmod +x gradlew
+    - name: Read version properties
+      id: version
+      run: |
+        if [ -f version.properties ]; then
+          VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        fi
 
     - name: Run lint check
+      if: '!inputs.skip-tests'
       run: ./gradlew lint${{ inputs.build-variant }}
 
     - name: Run unit tests
+      if: '!inputs.skip-tests'
       run: ./gradlew test${{ inputs.build-variant }}UnitTest
 
-    - name: Generate test report
+    - name: Generate unit test report
+      if: '!inputs.skip-tests && (success() || failure())'
       uses: dorny/test-reporter@v1
-      if: success() || failure()
       with:
-        name: ${{ inputs.build-variant }} Test Results
+        name: ${{ inputs.build-variant }} Unit Test Results
         path: app/build/test-results/test${{ inputs.build-variant }}UnitTest/TEST-*.xml
         reporter: java-junit
 
+    - name: Run Android instrumented tests
+      if: '!inputs.skip-tests && inputs.build-variant == ''Debug'''
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 29
+        target: default
+        arch: x86_64
+        profile: Nexus 6
+        script: ./gradlew connected${{ inputs.build-variant }}AndroidTest
+
+    - name: Generate Android test report
+      if: '!inputs.skip-tests && inputs.build-variant == ''Debug'' && (success() || failure())'
+      uses: dorny/test-reporter@v1
+      with:
+        name: ${{ inputs.build-variant }} Android Test Results
+        path: app/build/reports/androidTests/connected${{ inputs.build-variant }}AndroidTest/TEST-*.xml
+        reporter: java-junit
+
     - name: Build ${{ inputs.build-variant }} APK
-      run: ./gradlew assemble${{ inputs.build-variant }}
+      run: |
+        if [ "${{ inputs.build-variant }}" = "Release" ]; then
+          ./gradlew assemble${{ inputs.build-variant }} \
+            -PversionName=${{ steps.version.outputs.version || '1.0' }} \
+            -PversionCode=${{ github.run_number }}
+        else
+          ./gradlew assemble${{ inputs.build-variant }}
+        fi
+
+    - name: Upload APK artifacts
+      if: inputs.build-variant == 'Release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk
+        path: app/build/outputs/apk/release/*.apk
+        retention-days: 7
