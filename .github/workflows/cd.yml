@@ -1,0 +1,93 @@
+name: CD - Release Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    name: Create Production Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate release version
+      id: version
+      run: |
+        VERSION="$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+        TAG="v$VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "Generated version: $VERSION"
+
+    - name: Create release tag
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag ${{ steps.version.outputs.tag }}
+        git push origin ${{ steps.version.outputs.tag }}
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Cache Gradle dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+
+    - name: Build release APK
+      run: ./gradlew assembleRelease -PversionName=${{ steps.version.outputs.version }} -PversionCode=${{ github.run_number }}
+
+    - name: Sign APK for production
+      uses: r0adkll/sign-android-release@v1
+      with:
+        releaseDirectory: app/build/outputs/apk/release
+        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+        alias: ${{ secrets.ALIAS }}
+        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+        keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+    - name: Rename APK with version
+      run: |
+        mv app/build/outputs/apk/release/app-release-unsigned-signed.apk \
+           app/build/outputs/apk/release/pokemon-app-${{ steps.version.outputs.version }}.apk
+
+    - name: Create GitHub release with APK
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release create ${{ steps.version.outputs.tag }} \
+          app/build/outputs/apk/release/pokemon-app-${{ steps.version.outputs.version }}.apk \
+          --title "Pokemon App ${{ steps.version.outputs.tag }}" \
+          --notes "## Pokemon App ${{ steps.version.outputs.tag }}
+          
+          ### 📱 Installation Instructions
+          1. Download the APK file below
+          2. Enable \"Install from unknown sources\" in Android settings
+          3. Open the downloaded APK and follow installation prompts
+          
+          ### 📋 Requirements
+          - Android 7.0 (API 24) or higher
+          
+          ### 🔧 Build Information
+          - Version: ${{ steps.version.outputs.version }}
+          - Build Number: ${{ github.run_number }}
+          - Commit: ${{ github.sha }}"
