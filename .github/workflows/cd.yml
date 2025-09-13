@@ -56,6 +56,7 @@ jobs:
       run: ./gradlew assembleRelease -PversionName=${{ env.version }} -PversionCode=${{ github.run_number }}
 
     - name: Sign APK for production
+      id: sign_app
       uses: r0adkll/sign-android-release@v1
       with:
         releaseDirectory: app/build/outputs/apk/release
@@ -68,15 +69,14 @@ jobs:
 
     - name: Rename APK with version
       run: |
-        mv app/build/outputs/apk/release/app-release-unsigned-signed.apk \
-           app/build/outputs/apk/release/pokemon-${{ env.version }}.apk
+        cp ${{ steps.sign_app.outputs.signedReleaseFile }} pokemon-${{ env.version }}.apk
 
     - name: Create GitHub release with APK
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         gh release create ${{ env.tag }} \
-          app/build/outputs/apk/release/pokemon-${{ env.version }}.apk \
+          pokemon-${{ env.version }}.apk \
           --title "Pokemon ${{ env.tag }}" \
           --notes "## Pokemon ${{ env.tag }}
           
