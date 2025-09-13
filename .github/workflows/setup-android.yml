@@ -43,23 +43,24 @@ jobs:
         run: |
           CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip"
           ANDROID_HOME=$HOME/android-sdk
-          mkdir -p $ANDROID_HOME/cmdline-tools
+          mkdir -p $ANDROID_HOME/cmdline-tools/latest
           
           wget -q $CMDLINE_TOOLS_URL -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip -d $ANDROID_HOME/
-          mv $ANDROID_HOME/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
-          mkdir -p $ANDROID_HOME/cmdline-tools/tools
-          mv $ANDROID_HOME/cmdline-tools/latest $ANDROID_HOME/cmdline-tools/tools/
+          unzip -q cmdline-tools.zip -d $ANDROID_HOME/tmp/
+          
+          # Move the extracted contents to the correct location
+          mv $ANDROID_HOME/tmp/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
+          rm -rf $ANDROID_HOME/tmp
           
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/cmdline-tools/tools/bin" >> $GITHUB_PATH
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
           echo "android-home=$ANDROID_HOME" >> $GITHUB_OUTPUT
           
-          yes | $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager --licenses
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
           
           if [ "${{ inputs.install-platforms }}" = "true" ]; then
-            $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-33"
+            $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-33"
           else
-            $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager "platform-tools" "build-tools;34.0.0"
+            $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "build-tools;34.0.0"
           fi
