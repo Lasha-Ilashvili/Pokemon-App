@@ -23,23 +23,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Android Build Environment
+    - name: Setup Android development environment
+      uses: android-actions/setup-android@v3
+
+    - name: Setup Java with Gradle caching
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         cache: 'gradle'
 
-    - name: Make gradlew executable
-      run: chmod +x gradlew
+    - name: Run lint and unit tests
+      run: |
+        chmod +x gradlew
+        ./gradlew lint${{ inputs.build-variant }} test${{ inputs.build-variant }}UnitTest --continue --parallel --build-cache
 
-    - name: Run lint check
-      run: ./gradlew lint${{ inputs.build-variant }} --continue --parallel --build-cache
-
-    - name: Run unit tests
-      run: ./gradlew test${{ inputs.build-variant }}UnitTest --continue --parallel --build-cache
-
-    - name: Generate unit test report
+    - name: Generate test reports
       if: success() || failure()
       uses: dorny/test-reporter@v1
       with:
@@ -48,7 +47,7 @@ jobs:
         reporter: java-junit
 
   android-tests:
-    name: Android Instrumented Tests
+    name: Android Tests
     runs-on: ubuntu-latest
     if: '!inputs.skip-tests && inputs.build-variant == ''Debug'''
 
@@ -56,15 +55,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Android Build Environment
+    - name: Setup Android development environment
+      uses: android-actions/setup-android@v3
+
+    - name: Setup Java with Gradle caching
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         cache: 'gradle'
-
-    - name: Make gradlew executable
-      run: chmod +x gradlew
 
     - name: Run Android instrumented tests
       uses: reactivecircus/android-emulator-runner@v2
@@ -72,17 +71,18 @@ jobs:
         api-level: 29
         target: default
         arch: x86_64
-        profile: Nexus 6
-        emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
         disable-animations: true
-        script: ./gradlew connected${{ inputs.build-variant }}AndroidTest --continue --parallel
+        script: |
+          chmod +x gradlew
+          ./gradlew connected${{ inputs.build-variant }}AndroidTest --continue --parallel
 
-    - name: Generate Android test report
+    - name: Generate Android test reports
       if: success() || failure()
       uses: dorny/test-reporter@v1
       with:
         name: ${{ inputs.build-variant }} Android Test Results
-        path: app/build/outputs/androidTest-results/connected/TEST-*.xml
+        path: app/build/outputs/androidTest-results/connected/*/TEST-*.xml
         reporter: java-junit
 
   build-apk:
@@ -95,36 +95,28 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Android Build Environment
+    - name: Setup Java with Gradle caching
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         cache: 'gradle'
 
-    - name: Make gradlew executable
-      run: chmod +x gradlew
-
-    - name: Read version properties
-      id: version
+    - name: Read version and build APK
       run: |
-        if [ -f version.properties ]; then
-          VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Build ${{ inputs.build-variant }} APK
-      run: |
+        chmod +x gradlew
+        VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2 || echo "1.0")
+        
         if [ "${{ inputs.build-variant }}" = "Release" ]; then
           ./gradlew assemble${{ inputs.build-variant }} \
-            -PversionName=${{ steps.version.outputs.version || '1.0' }} \
+            -PversionName=$VERSION \
             -PversionCode=${{ github.run_number }} \
             --parallel --build-cache
         else
           ./gradlew assemble${{ inputs.build-variant }} --parallel --build-cache
         fi
 
-    - name: Upload APK artifacts
+    - name: Upload release artifacts
       if: inputs.build-variant == 'Release'
       uses: actions/upload-artifact@v4
       with:
