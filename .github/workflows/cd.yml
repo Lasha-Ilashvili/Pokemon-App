@@ -53,13 +53,8 @@ jobs:
     - name: Make gradlew executable
       run: chmod +x gradlew
 
-    - name: Update app version
-      run: |
-        sed -i 's/versionName = ".*"/versionName = "${{ steps.version.outputs.version }}"/' app/build.gradle.kts
-        sed -i 's/versionCode = [0-9]*/versionCode = ${{ github.run_number }}/' app/build.gradle.kts
-
     - name: Build release APK
-      run: ./gradlew assembleRelease
+      run: ./gradlew assembleRelease -PversionName=${{ steps.version.outputs.version }} -PversionCode=${{ github.run_number }}
 
     - name: Sign APK for production
       uses: r0adkll/sign-android-release@v1
