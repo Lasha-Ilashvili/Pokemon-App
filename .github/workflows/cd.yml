@@ -75,19 +75,18 @@ jobs:
         mv app/build/outputs/apk/release/app-release-unsigned-signed.apk \
            app/build/outputs/apk/release/pokemon-app-${{ steps.version.outputs.version }}.apk
 
-    - name: Create GitHub release
-      uses: actions/create-release@v1
+    - name: Create GitHub release with APK
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.version.outputs.tag }}
-        release_name: Pokemon App ${{ steps.version.outputs.tag }}
-        body: |
-          ## Pokemon App ${{ steps.version.outputs.tag }}
+      run: |
+        gh release create ${{ steps.version.outputs.tag }} \
+          app/build/outputs/apk/release/pokemon-app-${{ steps.version.outputs.version }}.apk \
+          --title "Pokemon App ${{ steps.version.outputs.tag }}" \
+          --notes "## Pokemon App ${{ steps.version.outputs.tag }}
           
           ### 📱 Installation Instructions
           1. Download the APK file below
-          2. Enable "Install from unknown sources" in Android settings
+          2. Enable \"Install from unknown sources\" in Android settings
           3. Open the downloaded APK and follow installation prompts
           
           ### 📋 Requirements
@@ -96,16 +95,4 @@ jobs:
           ### 🔧 Build Information
           - Version: ${{ steps.version.outputs.version }}
           - Build Number: ${{ github.run_number }}
-          - Commit: ${{ github.sha }}
-        draft: false
-        prerelease: false
-
-    - name: Upload APK to release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: app/build/outputs/apk/release/pokemon-app-${{ steps.version.outputs.version }}.apk
-        asset_name: pokemon-app-${{ steps.version.outputs.version }}.apk
-        asset_content_type: application/vnd.android.package-archive
+          - Commit: ${{ github.sha }}"
