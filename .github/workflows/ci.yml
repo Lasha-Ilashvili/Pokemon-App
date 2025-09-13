@@ -10,5 +10,8 @@ jobs:
   validate-changes:
     name: Validate Code Changes
     uses: ./.github/workflows/build-test.yml
+    permissions:
+      checks: write
+      pull-requests: write
     with:
       build-variant: Debug
