@@ -1,0 +1,14 @@
+name: CI - Pull Request Validation
+
+on:
+  pull_request:
+    branches: [ develop, main ]
+  push:
+    branches: [ develop ]
+
+jobs:
+  validate-changes:
+    name: Validate Code Changes
+    uses: ./.github/workflows/build-test.yml
+    with:
+      build-variant: Debug
