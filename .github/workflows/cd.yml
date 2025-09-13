@@ -6,20 +6,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-release:
-    name: Build and Release
+  build-release:
+    name: Build Release APK
     uses: ./.github/workflows/build-test.yml
-    permissions:
-      contents: write
     with:
       build-variant: Release
-      skip-tests: true
-    secrets: inherit
+      run-tests: false
 
-  create-release:
-    name: Create GitHub Release
+  sign-and-release:
+    name: Sign and Release
     runs-on: ubuntu-latest
-    needs: build-and-release
+    needs: build-release
     permissions:
       contents: write
 
@@ -27,60 +24,45 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Generate release version
-      run: |
-        VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2)
-        TAG="v$VERSION"
-        echo "version=$VERSION" >> $GITHUB_ENV
-        echo "tag=$TAG" >> $GITHUB_ENV
-        echo "Generated version: $VERSION"
-
-    - name: Create release tag
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git tag ${{ env.tag }}
-        git push origin ${{ env.tag }}
-
-    - name: Download release artifacts
+    - name: Download release APK
       uses: actions/download-artifact@v4
       with:
         name: release-apk
         path: ./
 
-    - name: Sign APK for production
-      id: sign_app
-      uses: r0adkll/sign-android-release@v1
-      with:
-        releaseDirectory: ./
-        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-        alias: ${{ secrets.ALIAS }}
-        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-        keyPassword: ${{ secrets.KEY_PASSWORD }}
-      env:
-        BUILD_TOOLS_VERSION: "34.0.0"
-
-    - name: Create GitHub release with APK
+    - name: Sign and release APK
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        mv ${{ steps.sign_app.outputs.signedReleaseFile }} pokemon-${{ env.version }}.apk
-        gh release create ${{ env.tag }} \
-          pokemon-${{ env.version }}.apk \
-          --title "Pokemon ${{ env.tag }}" \
-          --notes-file - << 'EOF'
-        ## Pokemon ${{ env.tag }}
+        VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2)
+        TAG="v$VERSION"
         
-        ### 📱 Installation Instructions
-        1. Download the APK file below
-        2. Enable "Install from unknown sources" in Android settings
-        3. Open the downloaded APK and follow installation prompts
+        # Sign APK
+        echo "${{ secrets.SIGNING_KEY }}" | base64 -d > keystore.jks
+        $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
+          --ks keystore.jks \
+          --ks-key-alias ${{ secrets.ALIAS }} \
+          --ks-pass pass:${{ secrets.KEY_STORE_PASSWORD }} \
+          --key-pass pass:${{ secrets.KEY_PASSWORD }} \
+          --out pokemon-$VERSION.apk \
+          app-release-unsigned.apk
+        rm keystore.jks
         
-        ### 📋 Requirements
-        - Android 7.0 (API 24) or higher
+        # Create and push tag
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag $TAG
+        git push origin $TAG
         
-        ### 🔧 Build Information
-        - Version: ${{ env.version }}
-        - Build Number: ${{ github.run_number }}
-        - Commit: ${{ github.sha }}
-        EOF
+        # Create GitHub release
+        gh release create $TAG pokemon-$VERSION.apk \
+          --title "Pokemon $TAG" \
+          --notes "## Pokemon $TAG
+          
+          ### 📱 Installation
+          Download the APK and install on Android 7.0+
+          
+          ### 🔧 Build Info
+          - Version: $VERSION
+          - Build: ${{ github.run_number }}
+          - Commit: ${{ github.sha }}"

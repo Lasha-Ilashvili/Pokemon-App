@@ -7,17 +7,16 @@ on:
         required: true
         type: string
         description: 'Build variant: Debug or Release'
-      skip-tests:
+      run-tests:
         required: false
         type: boolean
-        default: false
-        description: 'Skip all tests and lint checks'
+        default: true
+        description: 'Whether to run tests'
 
 jobs:
-  lint-and-unit-tests:
-    name: Lint and Unit Tests
+  build-and-test:
+    name: Build ${{ inputs.build-variant }}${{ inputs.run-tests && ' with Tests' || ' Only' }}
     runs-on: ubuntu-latest
-    if: '!inputs.skip-tests'
 
     steps:
     - name: Checkout code
@@ -33,80 +32,17 @@ jobs:
         distribution: 'temurin'
         cache: 'gradle'
 
-    - name: Run lint and unit tests
-      run: |
-        chmod +x gradlew
-        ./gradlew lint${{ inputs.build-variant }} test${{ inputs.build-variant }}UnitTest --continue --parallel --build-cache
-
-    - name: Generate test reports
-      if: success() || failure()
-      uses: dorny/test-reporter@v1
-      with:
-        name: ${{ inputs.build-variant }} Unit Test Results
-        path: app/build/test-results/test${{ inputs.build-variant }}UnitTest/TEST-*.xml
-        reporter: java-junit
-
-  android-tests:
-    name: Android Tests
-    runs-on: ubuntu-latest
-    if: '!inputs.skip-tests && inputs.build-variant == ''Debug'''
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Android development environment
-      uses: android-actions/setup-android@v3
-
-    - name: Setup Java with Gradle caching
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: 'gradle'
-
-    - name: Run Android instrumented tests
-      uses: reactivecircus/android-emulator-runner@v2
-      with:
-        api-level: 29
-        target: default
-        arch: x86_64
-        emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-        disable-animations: true
-        script: |
-          chmod +x gradlew
-          ./gradlew connected${{ inputs.build-variant }}AndroidTest --continue --parallel
-
-    - name: Generate Android test reports
-      if: success() || failure()
-      uses: dorny/test-reporter@v1
-      with:
-        name: ${{ inputs.build-variant }} Android Test Results
-        path: app/build/outputs/androidTest-results/connected/*/TEST-*.xml
-        reporter: java-junit
-
-  build-apk:
-    name: Build APK
-    runs-on: ubuntu-latest
-    needs: [lint-and-unit-tests, android-tests]
-    if: always() && (needs.lint-and-unit-tests.result == 'success' || inputs.skip-tests) && (needs.android-tests.result == 'success' || needs.android-tests.result == 'skipped')
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Java with Gradle caching
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: 'gradle'
-
-    - name: Read version and build APK
+    - name: Run tests and build
       run: |
         chmod +x gradlew
         VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2 || echo "1.0")
         
+        if [ "${{ inputs.run-tests }}" = "true" ]; then
+          # Run lint and unit tests
+          ./gradlew lint${{ inputs.build-variant }} test${{ inputs.build-variant }}UnitTest --continue --parallel --build-cache
+        fi
+        
+        # Build APK with conditional versioning
         if [ "${{ inputs.build-variant }}" = "Release" ]; then
           ./gradlew assemble${{ inputs.build-variant }} \
             -PversionName=$VERSION \
@@ -116,7 +52,28 @@ jobs:
           ./gradlew assemble${{ inputs.build-variant }} --parallel --build-cache
         fi
 
-    - name: Upload release artifacts
+    - name: Run Android instrumented tests
+      if: inputs.run-tests && inputs.build-variant == 'Debug'
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 29
+        target: default
+        arch: x86_64
+        emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        disable-animations: true
+        script: ./gradlew connected${{ inputs.build-variant }}AndroidTest --continue --parallel
+
+    - name: Generate test reports
+      if: inputs.run-tests && (success() || failure())
+      uses: dorny/test-reporter@v1
+      with:
+        name: ${{ inputs.build-variant }} Test Results
+        path: |
+          app/build/test-results/test${{ inputs.build-variant }}UnitTest/TEST-*.xml
+          app/build/outputs/androidTest-results/connected/*/TEST-*.xml
+        reporter: java-junit
+
+    - name: Upload APK artifacts
       if: inputs.build-variant == 'Release'
       uses: actions/upload-artifact@v4
       with:
