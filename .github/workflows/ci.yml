@@ -3,8 +3,6 @@ name: CI - Pull Request Validation
 on:
   pull_request:
     branches: [ develop, main ]
-  push:
-    branches: [ develop ]
 
 jobs:
   validate-changes:
@@ -17,4 +15,4 @@ jobs:
       build-variant: Debug
       run-tests: true
       upload-apk: false
-      is-ci-environment: true
+      github-environment: ci

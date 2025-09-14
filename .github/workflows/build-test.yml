@@ -14,17 +14,16 @@ on:
         required: false
         type: boolean
         default: false
-      is-ci-environment:
+      github-environment:
         required: false
-        type: boolean
-        default: false
+        type: string
+        default: ""
 
 jobs:
   build-and-test:
     name: Build ${{ inputs.build-variant }}${{ inputs.run-tests && ' with Tests' || ' Only' }}
     runs-on: ubuntu-latest
-    env:
-      IS_CI: ${{ inputs.is-ci-environment }}
+    environment: ${{ inputs.github-environment }}
 
     steps:
       - name: Checkout code
