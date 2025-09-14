@@ -6,12 +6,10 @@ on:
       build-variant:
         required: true
         type: string
-        description: 'Build variant: Debug or Release'
       run-tests:
         required: false
         type: boolean
         default: true
-        description: 'Whether to run tests'
 
 jobs:
   build-and-test:
@@ -19,52 +17,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Android development environment
-      uses: android-actions/setup-android@v3
+      - name: Setup Android environment
+        uses: android-actions/setup-android@v3
 
-    - name: Setup Java with Gradle caching
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: 'gradle'
+      - name: Setup Java with Gradle caching
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
 
-    - name: Run tests and build
-      run: |
-        chmod +x gradlew
-        VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2 || echo "1.0")
-        
-        if [ "${{ inputs.run-tests }}" = "true" ]; then
-          # Run lint and unit tests
-          ./gradlew lint${{ inputs.build-variant }} test${{ inputs.build-variant }}UnitTest --continue --parallel --build-cache
-        fi
-        
-        # Build APK with conditional versioning
-        if [ "${{ inputs.build-variant }}" = "Release" ]; then
-          ./gradlew assemble${{ inputs.build-variant }} \
-            -PversionName=$VERSION \
-            -PversionCode=${{ github.run_number }} \
-            --parallel --build-cache
-        else
-          ./gradlew assemble${{ inputs.build-variant }} --parallel --build-cache
-        fi
+      - name: Run lint/tests and build
+        run: |
+          chmod +x gradlew
+          VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2 || echo "1.0")
+          
+          if [[ "${{ inputs.run-tests }}" == "true" ]]; then
+            ./gradlew lint${{ inputs.build-variant }} test${{ inputs.build-variant }}UnitTest --continue --parallel --build-cache
+          fi
+          
+          if [ "${{ inputs.build-variant }}" = "Release" ]; then
+            ./gradlew assemble${{ inputs.build-variant }} \
+              -PversionName=$VERSION \
+              -PversionCode=${{ github.run_number }} \
+              --parallel --build-cache
+          else
+            ./gradlew assemble${{ inputs.build-variant }} --parallel --build-cache
+          fi
 
-    - name: Generate test reports
-      if: inputs.run-tests && (success() || failure())
-      uses: dorny/test-reporter@v1
-      with:
-        name: ${{ inputs.build-variant }} Test Results
-        path: |
-          app/build/test-results/test${{ inputs.build-variant }}UnitTest/TEST-*.xml
-        reporter: java-junit
+      - name: Generate test reports
+        if: inputs.run-tests && (success() || failure())
+        uses: dorny/test-reporter@v1
+        with:
+          name: ${{ inputs.build-variant }} Test Results
+          path: |
+            app/build/test-results/test${{ inputs.build-variant }}UnitTest/TEST-*.xml
+          reporter: java-junit
 
-    - name: Upload APK artifacts
-      if: inputs.build-variant == 'Release'
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-apk
-        path: app/build/outputs/apk/release/*.apk
-        retention-days: 7
+      - name: Upload APK artifacts
+        if: inputs.run-tests == false && inputs.build-variant == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 14
