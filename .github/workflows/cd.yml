@@ -6,24 +6,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-release:
-    name: Build Release APK
+  build-and-release:
+    name: Build and Release
     uses: ./.github/workflows/build-test.yml
+    permissions:
+      contents: write
     with:
-      build-variant: Release
-      run-tests: false
+      mode: cd
+    secrets: inherit
 
-  setup-signing-env:
-    name: Prepare Signing Environment
-    uses: ./.github/workflows/setup-android.yml
-    needs: build-release
-    with:
-      install-platforms: false
-
-  sign-and-release:
-    name: Sign and Release
+  create-release:
+    name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-release, setup-signing-env]
+    needs: build-and-release
     permissions:
       contents: write
 
@@ -31,52 +26,72 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure Android SDK
+      - name: Generate release version
         run: |
-          ANDROID_HOME=${{ needs.setup-signing-env.outputs.android-home }}
-          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+          VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2)
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> $GITHUB_ENV
+          echo "tag=$TAG" >> $GITHUB_ENV
+          echo "Generated version: $VERSION"
 
-      - name: Download release APK
+      - name: Check if tag already exists
+        run: |
+          if git rev-parse "${{ env.tag }}" >/dev/null 2>&1; then
+            echo "Tag ${{ env.tag }} already exists. Skipping release creation."
+            echo "skip_release=true" >> $GITHUB_ENV
+          else
+            echo "skip_release=false" >> $GITHUB_ENV
+          fi
+
+      - name: Create release tag
+        if: env.skip_release == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ env.tag }}
+          git push origin ${{ env.tag }}
+
+      - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-apk
-          path: ./
+          name: release-artifacts
+          path: ./artifacts
 
-      - name: Sign and release APK
+      - name: Sign APK for production
+        id: sign_app
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: ./artifacts
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
+
+      - name: Create GitHub release with APK
+        if: env.skip_release == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=${{ needs.setup-signing-env.outputs.app-version }}
-          TAG="v$VERSION"
+          APK_NAME="pokemon-${{ env.version }}.apk"
+          mv "${{ steps.sign_app.outputs.signedReleaseFile }}" "$APK_NAME"
           
-          BUILD_TOOLS_VERSION=$(ls -1 $ANDROID_HOME/build-tools/ | sort -V | tail -n 1)
-          echo "Using build tools version: $BUILD_TOOLS_VERSION"
+          gh release create "${{ env.tag }}" \
+            "$APK_NAME" \
+            --title "Pokemon ${{ env.tag }}" \
+            --generate-notes \
+            --notes "## Pokemon ${{ env.tag }}
           
-          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > keystore.jks
-          $ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner sign \
-            --ks keystore.jks \
-            --ks-key-alias ${{ secrets.ALIAS }} \
-            --ks-pass pass:${{ secrets.KEY_STORE_PASSWORD }} \
-            --key-pass pass:${{ secrets.KEY_PASSWORD }} \
-            --out pokemon-$VERSION.apk \
-            app-release-unsigned.apk
-          rm keystore.jks
+          ### 📱 Installation Instructions
+          1. Download the APK file below
+          2. Enable \"Install from unknown sources\" in Android settings
+          3. Open the downloaded APK and follow installation prompts
           
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag $TAG
-          git push origin $TAG
+          ### 📋 Requirements
+          - Android 7.0 (API 24) or higher
           
-          gh release create $TAG pokemon-$VERSION.apk \
-            --title "Pokemon $TAG" \
-            --notes "## Pokemon $TAG
-          
-            ### 📱 Installation
-            Download the APK and install on Android 7.0+
-          
-            ### 🔧 Build Info
-            - Version: $VERSION
-            - Build: ${{ github.run_number }}
-            - Commit: ${{ github.sha }}"
+          ### 🔧 Build Information
+          - Version: ${{ env.version }}
+          - Build Number: ${{ github.run_number }}
+          - Commit: ${{ github.sha }}"
