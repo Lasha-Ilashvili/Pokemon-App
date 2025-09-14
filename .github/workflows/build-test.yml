@@ -47,9 +47,10 @@ jobs:
         with:
           name: ci-reports
           path: |
-            app/build/reports/lint-results-*.html
-            app/build/reports/jacoco/
-            build/reports/dependency-check-report.html
+            **/build/reports/lint-results*.html
+            **/build/reports/jacoco/
+            **/build/reports/dependency-check-report.html
+            **/reports/
           retention-days: 7
 
       - name: Generate test reports
@@ -76,6 +77,8 @@ jobs:
     if: inputs.mode == 'ci'
     permissions:
       security-events: write
+      actions: read
+      contents: read
 
     steps:
       - name: Checkout code
@@ -87,10 +90,16 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Run CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
         with:
-          languages: java
+          languages: java-kotlin
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
 
   build-release:
     name: Build Release APK
