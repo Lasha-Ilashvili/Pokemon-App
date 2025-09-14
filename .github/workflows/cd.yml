@@ -12,6 +12,7 @@ jobs:
     with:
       build-variant: Release
       run-tests: false
+      upload-apk: true
 
   sign-and-release:
     name: Sign and Release

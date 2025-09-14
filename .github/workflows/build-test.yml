@@ -10,6 +10,10 @@ on:
         required: false
         type: boolean
         default: true
+      upload-apk:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-and-test:
@@ -30,14 +34,16 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Run lint/tests and build
+      - name: Run lint and tests
+        if: inputs.run-tests
+        run: |
+          chmod +x gradlew
+          ./gradlew lint${{ inputs.build-variant }} test${{ inputs.build-variant }}UnitTest --continue --parallel --build-cache
+
+      - name: Build APK
         run: |
           chmod +x gradlew
           VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2 || echo "1.0")
-          
-          if [[ "${{ inputs.run-tests }}" == "true" ]]; then
-            ./gradlew lint${{ inputs.build-variant }} test${{ inputs.build-variant }}UnitTest --continue --parallel --build-cache
-          fi
           
           if [ "${{ inputs.build-variant }}" = "Release" ]; then
             ./gradlew assemble${{ inputs.build-variant }} \
@@ -58,7 +64,7 @@ jobs:
           reporter: java-junit
 
       - name: Upload APK artifacts
-        if: inputs.run-tests == false && inputs.build-variant == 'Release'
+        if: inputs.upload-apk && inputs.build-variant == 'Release'
         uses: actions/upload-artifact@v4
         with:
           name: release-apk

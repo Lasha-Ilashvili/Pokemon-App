@@ -16,3 +16,4 @@ jobs:
     with:
       build-variant: Debug
       run-tests: true
+      upload-apk: false
