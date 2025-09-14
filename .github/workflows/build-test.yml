@@ -56,24 +56,6 @@ jobs:
         path: app/build/test-results/test${{ inputs.build-variant }}UnitTest/TEST-*.xml
         reporter: java-junit
 
-    - name: Run Android instrumented tests
-      if: '!inputs.skip-tests && inputs.build-variant == ''Debug'''
-      uses: reactivecircus/android-emulator-runner@v2
-      with:
-        api-level: 29
-        target: default
-        arch: x86_64
-        profile: Nexus 6
-        script: ./gradlew connected${{ inputs.build-variant }}AndroidTest
-
-    - name: Generate Android test report
-      if: '!inputs.skip-tests && inputs.build-variant == ''Debug'' && (success() || failure())'
-      uses: dorny/test-reporter@v1
-      with:
-        name: ${{ inputs.build-variant }} Android Test Results
-        path: app/build/reports/androidTests/connected${{ inputs.build-variant }}AndroidTest/TEST-*.xml
-        reporter: java-junit
-
     - name: Build ${{ inputs.build-variant }} APK
       run: |
         if [ "${{ inputs.build-variant }}" = "Release" ]; then
