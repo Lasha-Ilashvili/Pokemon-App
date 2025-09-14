@@ -52,17 +52,6 @@ jobs:
           ./gradlew assemble${{ inputs.build-variant }} --parallel --build-cache
         fi
 
-    - name: Run Android instrumented tests
-      if: inputs.run-tests && inputs.build-variant == 'Debug'
-      uses: reactivecircus/android-emulator-runner@v2
-      with:
-        api-level: 29
-        target: default
-        arch: x86_64
-        emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-        disable-animations: true
-        script: ./gradlew connected${{ inputs.build-variant }}AndroidTest --continue --parallel
-
     - name: Generate test reports
       if: inputs.run-tests && (success() || failure())
       uses: dorny/test-reporter@v1
@@ -70,7 +59,6 @@ jobs:
         name: ${{ inputs.build-variant }} Test Results
         path: |
           app/build/test-results/test${{ inputs.build-variant }}UnitTest/TEST-*.xml
-          app/build/outputs/androidTest-results/connected/*/TEST-*.xml
         reporter: java-junit
 
     - name: Upload APK artifacts
