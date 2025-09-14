@@ -22,48 +22,50 @@ jobs:
       contents: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Download release APK
-      uses: actions/download-artifact@v4
-      with:
-        name: release-apk
-        path: ./
+      - name: Download release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: release-apk
+          path: ./
 
-    - name: Sign and release APK
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2)
-        TAG="v$VERSION"
-        
-        # Sign APK
-        echo "${{ secrets.SIGNING_KEY }}" | base64 -d > keystore.jks
-        $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
-          --ks keystore.jks \
-          --ks-key-alias ${{ secrets.ALIAS }} \
-          --ks-pass pass:${{ secrets.KEY_STORE_PASSWORD }} \
-          --key-pass pass:${{ secrets.KEY_PASSWORD }} \
-          --out pokemon-$VERSION.apk \
-          app-release-unsigned.apk
-        rm keystore.jks
-        
-        # Create and push tag
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git tag $TAG
-        git push origin $TAG
-        
-        # Create GitHub release
-        gh release create $TAG pokemon-$VERSION.apk \
-          --title "Pokemon $TAG" \
-          --notes "## Pokemon $TAG
+      - name: Sign and release APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(grep 'versionName=' version.properties | cut -d'=' -f2)
+          TAG="v$VERSION"
           
-          ### 📱 Installation
-          Download the APK and install on Android 7.0+
+          BUILD_TOOLS_VERSION=$(ls -1 $ANDROID_HOME/build-tools | sort -V | tail -n 1)
+          echo "Using build-tools version: $BUILD_TOOLS_VERSION"
           
-          ### 🔧 Build Info
-          - Version: $VERSION
-          - Build: ${{ github.run_number }}
-          - Commit: ${{ github.sha }}"
+          KEYPATH=$(mktemp -u keystore.XXXXXX)
+          mkfifo "$KEYPATH"
+          trap 'rm -f "$KEYPATH"' EXIT
+          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > "$KEYPATH" &
+          $ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner sign \
+            --ks "$KEYPATH" \
+            --ks-key-alias ${{ secrets.ALIAS }} \
+            --ks-pass pass:${{ secrets.KEY_STORE_PASSWORD }} \
+            --key-pass pass:${{ secrets.KEY_PASSWORD }} \
+            --out pokemon-$VERSION.apk \
+            app-release-unsigned.apk
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag $TAG
+          git push origin $TAG
+          
+          gh release create $TAG pokemon-$VERSION.apk \
+            --title "Pokemon $TAG" \
+            --notes "## Pokemon $TAG
+          
+            ### 📱 Installation
+            Download the APK and install on Android 7.0+
+          
+            ### 🔧 Build Info
+            - Version: $VERSION
+            - Build: ${{ github.run_number }}
+            - Commit: ${{ github.sha }}"
