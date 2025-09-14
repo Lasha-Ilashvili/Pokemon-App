@@ -11,6 +11,7 @@ jobs:
     name: Validate Code Changes
     uses: ./.github/workflows/build-test.yml
     permissions:
+      actions: read
       checks: write
       pull-requests: write
       contents: read
