@@ -22,11 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
+import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -35,6 +37,33 @@ import com.task.pokemon_app.domain.exception.ErrorType
 import com.task.pokemon_app.presentation.event.PokemonListEvent
 import com.task.pokemon_app.presentation.model.PokemonUiModel
 import com.task.pokemon_app.presentation.state.PokemonListState
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flowOf
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun PokemonListScreenPreview() {
+    val samplePokemons = listOf(
+        PokemonUiModel(
+            id = "1",
+            name = "Bulbasaur",
+            url = "https://pokeapi.co/api/v2/pokemon/1/",
+            imageUrl = "https://img.pokemondb.net/artwork/bulbasaur.jpg"
+        ),
+        PokemonUiModel(
+            id = "25",
+            name = "Pikachu",
+            url = "https://pokeapi.co/api/v2/pokemon/25/",
+            imageUrl = "https://img.pokemondb.net/artwork/pikachu.jpg"
+        )
+    )
+
+    Content(
+        pokemonItems = flowOf(PagingData.from(samplePokemons)).collectAsLazyPagingItems(),
+        uiState = PokemonListState(),
+        onEvent = {}
+    )
+}
 
 @Composable
 fun PokemonListScreen(
@@ -46,7 +75,10 @@ fun PokemonListScreen(
     val pokemonItems = viewModel.pokemonPagingData.collectAsLazyPagingItems()
 
     LaunchedEffect(Unit) {
-        viewModel.uiEvent.collect { event -> onNavigate(event) }
+        viewModel.uiEvent.collectLatest { event ->
+            onNavigate(event)
+            viewModel.onEvent(PokemonListEvent.OnNavigationHandled)
+        }
     }
 
     Content(
@@ -86,12 +118,14 @@ private fun Content(
                     PokemonItem(
                         pokemon = model,
                         corner = corner,
+                        isNavigating = uiState.isNavigating,
                         onImageClick = { onEvent(PokemonListEvent.OnImageClick(model.imageUrl)) },
                         onDetailsClick = {
                             onEvent(
                                 PokemonListEvent.OnDetailsClick(
                                     name = model.name,
-                                    imageUrl = model.imageUrl
+                                    imageUrl = model.imageUrl,
+                                    detailsUrl = model.url
                                 )
                             )
                         }
@@ -123,6 +157,7 @@ private fun Content(
 private fun PokemonItem(
     pokemon: PokemonUiModel,
     corner: Dp,
+    isNavigating: Boolean,
     onImageClick: () -> Unit,
     onDetailsClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -166,7 +201,11 @@ private fun PokemonItem(
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(text = pokemon.name, style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onDetailsClick, modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onDetailsClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isNavigating
+                ) {
                     Text("Details")
                 }
             }
