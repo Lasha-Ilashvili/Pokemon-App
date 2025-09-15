@@ -2,7 +2,7 @@ package com.task.pokemon_app.data.data_source
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.task.pokemon_app.data.common.HandleResponse.safeApiCall
+import com.task.pokemon_app.data.common.HandleResponse
 import com.task.pokemon_app.data.common.Result
 import com.task.pokemon_app.domain.exception.ApiException
 import com.task.pokemon_app.domain.exception.ErrorType
@@ -13,13 +13,14 @@ import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 
 class PokemonListPagingSource @Inject constructor(
-    private val service: PokemonListService
+    private val service: PokemonListService,
+    private val handleResponse: HandleResponse
 ) : PagingSource<String, PokemonDto>() {
 
     override suspend fun load(params: LoadParams<String>): LoadResult<String, PokemonDto> {
         val url = params.key
 
-        val result = safeApiCall {
+        val result = handleResponse.safeApiCall {
             url?.let { service.getPokemonList(it) } ?: service.getPokemonList()
         }.filterNot { it is Result.Loading }.firstOrNull()
 

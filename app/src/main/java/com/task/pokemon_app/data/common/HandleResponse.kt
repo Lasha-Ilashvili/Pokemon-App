@@ -14,7 +14,7 @@ import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
-object HandleResponse {
+class HandleResponse {
 
     fun <T> safeApiCall(apiCall: suspend () -> Response<T>): Flow<Result<T>> = flow {
         emit(Result.Loading(isLoading = true))
