@@ -17,6 +17,9 @@ moshi = "1.15.2"
 ksp = "2.2.20-2.0.3"
 paging = "3.3.6"
 coil = "3.3.0"
+coroutinesTest = "1.10.2"
+mockk = "1.14.5"
+turbine = "1.2.1"
 
 [libraries]
 # AndroidX Core
@@ -66,6 +69,9 @@ coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp"
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 
 [plugins]
 # Android
