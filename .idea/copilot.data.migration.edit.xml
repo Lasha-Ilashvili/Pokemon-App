@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="EditMigrationStateService">
+    <option name="pendingSessionIds">
+      <option value="0ed84c33-9d34-45ac-8c2b-067bd9e61dc0" />
+      <option value="7596a7b4-7252-484a-a9aa-a08b7c95dd3e" />
+      <option value="ef69bcfc-f3f6-4dcd-bfea-f64b4dd7e874" />
+      <option value="f0bdfbb2-3d0c-46a7-8ea3-eac4a01ee399" />
+    </option>
+    <option name="pendingTurns">
+      <map>
+        <entry key="0ed84c33-9d34-45ac-8c2b-067bd9e61dc0">
+          <value>
+            <set>
+              <option value="b137a6c4-cab7-4dd3-aea0-c391ec3fcaef" />
+              <option value="3cfb5642-2a7a-4e49-bbdf-efc17a8fd9e9" />
+            </set>
+          </value>
+        </entry>
+        <entry key="7596a7b4-7252-484a-a9aa-a08b7c95dd3e">
+          <value>
+            <set>
+              <option value="23ad5f61-ce7d-48b6-bc22-26f42d32fe25" />
+              <option value="b44c9972-f313-4817-808b-3e91b58d61b3" />
+              <option value="4b058abc-42c4-404b-86e3-ef1319fbd14f" />
+              <option value="4fe6b1ec-dec2-428c-be73-89e50ad436b3" />
+            </set>
+          </value>
+        </entry>
+        <entry key="ef69bcfc-f3f6-4dcd-bfea-f64b4dd7e874">
+          <value>
+            <set>
+              <option value="ca3106ed-3f12-42e9-b6d2-26776012587d" />
+              <option value="c4f8c0dc-7627-4e64-8b6f-d140edd4a849" />
+              <option value="5af684ea-37d9-481b-8050-1b0762753034" />
+              <option value="3dd361b9-17a2-4eab-b5b0-7bbc19ed2533" />
+              <option value="3644534f-c167-4bea-9987-9f1a8c84ddbc" />
+              <option value="83e18f60-5b78-4ed7-8754-cec6b1dfa62c" />
+              <option value="44df5e36-3d17-4345-b685-5a604a63edb7" />
+              <option value="aab896e5-e38d-4ab4-b347-ecb1905796c6" />
+              <option value="218d53e7-c959-4394-a8d8-ed70797bc5dc" />
+            </set>
+          </value>
+        </entry>
+        <entry key="f0bdfbb2-3d0c-46a7-8ea3-eac4a01ee399">
+          <value>
+            <set>
+              <option value="7685ba6c-f02f-4bb2-8932-3e1e3fbc139f" />
+              <option value="dc9b7350-70cb-41de-8def-d1e846e1754a" />
+            </set>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <pendingWorkingSetItems>
+      <entry key="0ed84c33-9d34-45ac-8c2b-067bd9e61dc0">
+        <set>
+          <option value="file://$PROJECT_DIR$/app/build.gradle.kts" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/di/AppModule.kt" />
+        </set>
+      </entry>
+      <entry key="7596a7b4-7252-484a-a9aa-a08b7c95dd3e">
+        <set>
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/presentation/screen/pokemon_list/PokemonListScreen.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/repository/PokemonListRepositoryImpl.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/service/PokemonListService.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/data_source/PokemonListPagingSource.kt" />
+        </set>
+      </entry>
+      <entry key="ef69bcfc-f3f6-4dcd-bfea-f64b4dd7e874">
+        <set>
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/di/AppModule.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/service/PokemonListService.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/common/Result.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/repository/PokemonRepository.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/common/HandleResponse.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/common/ApiException.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/repository/PokemonListRepositoryImpl.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/common/exception/ApiException.kt" />
+          <option value="file://$PROJECT_DIR$/app/build.gradle.kts" />
+          <option value="file://$PROJECT_DIR$/gradle/libs.versions.toml" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/mapper.kt" />
+          <option value="file://$PROJECT_DIR$/app/src/main/java/com/task/pokemon_app/data/common/BaseMapper.kt" />
+        </set>
+      </entry>
+      <entry key="f0bdfbb2-3d0c-46a7-8ea3-eac4a01ee399">
+        <set>
+          <option value="file://$PROJECT_DIR$/gradle/libs.versions.toml" />
+          <option value="file://$PROJECT_DIR$/app/build.gradle.kts" />
+          <option value="file://$PROJECT_DIR$/build.gradle.kts" />
+        </set>
+      </entry>
+    </pendingWorkingSetItems>
+  </component>
+</project>
