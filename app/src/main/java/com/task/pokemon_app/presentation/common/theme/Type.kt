@@ -1,4 +1,4 @@
-package com.task.pokemon_app.ui.theme
+package com.task.pokemon_app.presentation.common.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
