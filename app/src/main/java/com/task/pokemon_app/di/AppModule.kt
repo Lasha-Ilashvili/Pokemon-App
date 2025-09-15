@@ -3,6 +3,7 @@ package com.task.pokemon_app.di
 import com.squareup.moshi.Moshi
 import com.task.pokemon_app.BuildConfig.BASE_URL
 import com.task.pokemon_app.BuildConfig.DEBUG
+import com.task.pokemon_app.data.common.HandleResponse
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -43,5 +44,11 @@ object AppModule {
             .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(Moshi.Builder().build()))
             .build()
+    }
+
+    @Singleton
+    @Provides
+    fun provideHandleResponse(): HandleResponse {
+        return HandleResponse()
     }
 }

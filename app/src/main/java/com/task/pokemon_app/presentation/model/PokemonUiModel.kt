@@ -6,5 +6,6 @@ import androidx.compose.runtime.Immutable
 data class PokemonUiModel(
     val id: String,
     val name: String,
-    val url: String
+    val url: String,
+    val imageUrl: String,
 )
