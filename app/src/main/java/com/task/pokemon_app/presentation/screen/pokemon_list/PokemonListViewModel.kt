@@ -42,7 +42,13 @@ class PokemonListViewModel @Inject constructor(
         when (event) {
             is PokemonListEvent.OnImageClick -> handleImageClick(event.imageUrl)
             PokemonListEvent.OnOverlayDismiss -> handleOverlayDismiss()
-            is PokemonListEvent.OnDetailsClick -> handleDetails(event.name, event.imageUrl)
+            is PokemonListEvent.OnDetailsClick -> handleDetails(
+                name = event.name,
+                imageUrl = event.imageUrl,
+                detailsUrl = event.detailsUrl
+            )
+
+            PokemonListEvent.OnNavigationHandled -> _uiState.update { it.copy(isNavigating = false) }
         }
     }
 
@@ -54,13 +60,18 @@ class PokemonListViewModel @Inject constructor(
         _uiState.update { it.copy(enlargedImageUrl = null) }
     }
 
-    private fun handleDetails(name: String, imageUrl: String) {
+    private fun handleDetails(name: String, imageUrl: String, detailsUrl: String) {
+        _uiState.update { it.copy(isNavigating = true) }
         viewModelScope.launch {
-            _uiEvent.emit(PokemonListUiEvent.NavigateToDetails(name, imageUrl))
+            _uiEvent.emit(PokemonListUiEvent.NavigateToDetails(name, imageUrl, detailsUrl))
         }
     }
 
     sealed interface PokemonListUiEvent {
-        data class NavigateToDetails(val name: String, val imageUrl: String) : PokemonListUiEvent
+        data class NavigateToDetails(
+            val name: String,
+            val imageUrl: String,
+            val detailsUrl: String
+        ) : PokemonListUiEvent
     }
 }

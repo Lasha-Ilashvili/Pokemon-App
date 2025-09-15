@@ -1,5 +1,6 @@
 package com.task.pokemon_app.presentation.state
 
 data class PokemonListState(
-    val enlargedImageUrl: String? = null
+    val enlargedImageUrl: String? = null,
+    val isNavigating: Boolean = false,
 )
